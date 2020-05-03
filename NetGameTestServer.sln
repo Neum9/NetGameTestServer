@@ -5,6 +5,10 @@ VisualStudioVersion = 15.0.28307.757
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetGameTestServer", "NetGameTestServer\NetGameTestServer.csproj", "{10F4420F-E517-440A-AFFD-E788FDF017CA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestSerialization", "TestSerialization\TestSerialization.csproj", "{ECF964D1-9555-4707-8DFF-BD7AF43CE55B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestTimer", "TestTimer\TestTimer.csproj", "{AECDA0F7-F312-45D7-B9D6-D49760123EC9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +19,14 @@ Global
 		{10F4420F-E517-440A-AFFD-E788FDF017CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{10F4420F-E517-440A-AFFD-E788FDF017CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{10F4420F-E517-440A-AFFD-E788FDF017CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ECF964D1-9555-4707-8DFF-BD7AF43CE55B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ECF964D1-9555-4707-8DFF-BD7AF43CE55B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ECF964D1-9555-4707-8DFF-BD7AF43CE55B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ECF964D1-9555-4707-8DFF-BD7AF43CE55B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AECDA0F7-F312-45D7-B9D6-D49760123EC9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AECDA0F7-F312-45D7-B9D6-D49760123EC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AECDA0F7-F312-45D7-B9D6-D49760123EC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AECDA0F7-F312-45D7-B9D6-D49760123EC9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
