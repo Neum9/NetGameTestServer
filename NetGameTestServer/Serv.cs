@@ -103,18 +103,18 @@ namespace NetGameTestServer {
                 string str = System.Text.Encoding.UTF8.GetString(conn.readBuff, 0, count);
                 Console.WriteLine("收到 [" + conn.GetAddress() + "]数据:" + str);
                 HandleMsg(conn, str);
-                str = conn.GetAddress() + ":" + str;
-                byte[] bytes = System.Text.Encoding.Default.GetBytes(str);
-                //广播
-                for (int i = 0; i < conns.Length; i++) {
-                    if (conns[i] == null) {
-                        continue;
-                    } else if (!conns[i].isUse) {
-                        continue;
-                    }
-                    Console.WriteLine("将消息转播给 " + conns[i].GetAddress());
-                    conns[i].socket.Send(bytes);
-                }
+                //str = conn.GetAddress() + ":" + str;
+                //byte[] bytes = System.Text.Encoding.Default.GetBytes(str);
+                ////广播
+                //for (int i = 0; i < conns.Length; i++) {
+                //    if (conns[i] == null) {
+                //        continue;
+                //    } else if (!conns[i].isUse) {
+                //        continue;
+                //    }
+                //    Console.WriteLine("将消息转播给 " + conns[i].GetAddress());
+                //    conns[i].socket.Send(bytes);
+                //}
                 //继续接收
                 conn.socket.BeginReceive(conn.readBuff, conn.buffCount, conn.BuffRemain(), SocketFlags.None, ReceiveCb, conn);
             } catch (Exception e) {
@@ -124,7 +124,7 @@ namespace NetGameTestServer {
             }
         }
 
-        private void HandleMsg(Conn conn, string str) {
+        private void HandleMsg1(Conn conn, string str) {
             if (str == "_GET") {
                 string cmdStr = "select * from msg order by id desc limit 10;";
                 MySqlCommand cmd = new MySqlCommand(cmdStr, sqlConn);
@@ -152,6 +152,20 @@ namespace NetGameTestServer {
 
                     Console.WriteLine("数据库插入失败" + e.Message);
                 }
+            }
+        }
+
+        public void HandleMsg(Conn conn,string str) {
+            byte[] bytes = System.Text.Encoding.Default.GetBytes(str);
+            //广播
+            for (int i = 0; i < conns.Length; i++) {
+                if (conns[i] == null) {
+                    continue;
+                } else if (!conns[i].isUse) {
+                    continue;
+                }
+                Console.WriteLine("将消息转播给 " + conns[i].GetAddress());
+                conns[i].socket.Send(bytes);
             }
         }
     }
