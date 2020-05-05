@@ -49,6 +49,7 @@
   <ItemGroup>
     <Compile Include="core\DataMgr.cs" />
     <Compile Include="core\Player.cs" />
+    <Compile Include="logic\PlayerTempData.cs" />
     <Compile Include="logic\PlayerData.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
