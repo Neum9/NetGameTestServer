@@ -33,8 +33,7 @@ namespace NetGameServer {
         }
 
         public override string GetName() {
-            //return GetString(0);
-            return base.GetName();
+            return GetString(0);
         }
 
         //添加字符串

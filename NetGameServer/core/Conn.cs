@@ -62,6 +62,11 @@ namespace NetGameServer {
             isUse = false;
         }
 
+        //TODOCjc
+        internal void Send(ProtocolBytes protocol) {
+            throw new NotImplementedException();
+        }
+
         //TODOCjc 发送协议
 
     }

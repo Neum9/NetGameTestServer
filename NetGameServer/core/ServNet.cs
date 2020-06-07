@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Timers;
@@ -21,10 +22,15 @@ namespace NetGameServer {
         //主定时器
         System.Timers.Timer timer = new System.Timers.Timer(1000);
         //心跳时间
-        public long heartBeatTime = 10;
+        public long heartBeatTime = 180;
 
         //协议
         public ProtocolBase proto;
+
+        //消息分发
+        public HandleConnMsg handleConnMsg = new HandleConnMsg();
+        public HandlePlayerMsg handlePlayerMsg = new HandlePlayerMsg();
+        public HandlePlayerEvent handlePlayerEvent = new HandlePlayerEvent();
 
         public ServNet() {
             instance = this;
@@ -77,7 +83,7 @@ namespace NetGameServer {
         public void HeartBeat() {
             Console.WriteLine("[主定时器执行]");
             long timeNow = Sys.GetTimeStamp();
-            for (int i = 0;i < conns.Length;i++) {
+            for (int i = 0; i < conns.Length; i++) {
                 Conn conn = conns[i];
                 if (conn == null) {
                     continue;
@@ -168,12 +174,15 @@ namespace NetGameServer {
                 return;
             }
             //处理消息
-            string str = System.Text.Encoding.UTF8.GetString(conn.readBuff, sizeof(Int32), conn.msgLength);
-            Console.WriteLine("收到消息 [" + conn.GetAddress() + "] " + str);
-            if (str == "HeartBeat") {
-                conn.lastTickTime = Sys.GetTimeStamp();
-            }
-            Send(conn, str);
+            ProtocolBase protocol = proto.Decode(conn.readBuff, sizeof(Int32), conn.msgLength);
+            HandleMsg(conn, protocol);
+
+            //string str = System.Text.Encoding.UTF8.GetString(conn.readBuff, sizeof(Int32), conn.msgLength);
+            //Console.WriteLine("收到消息 [" + conn.GetAddress() + "] " + str);
+            //if (str == "HeartBeat") {
+            //    conn.lastTickTime = Sys.GetTimeStamp();
+            //}
+            //Send(conn, str);
             //清除已处理的消息
             int count = conn.buffCount - conn.msgLength - sizeof(Int32);
             Array.Copy(conn.readBuff, sizeof(Int32) + conn.msgLength, conn.readBuff, 0, count);
@@ -183,8 +192,47 @@ namespace NetGameServer {
             }
         }
 
-        private void Send(Conn conn, string str) {
-            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(str);
+        private void HandleMsg(Conn conn, ProtocolBase protoBase) {
+            string name = protoBase.GetName();
+            string methodName = "Msg" + name;
+            //连接协议分发
+            if (conn.player == null || name == "HeartBeat" || name == "Logout") {
+                MethodInfo mm = handleConnMsg.GetType().GetMethod(methodName);
+                if (mm == null) {
+                    string str = "[警告]HandleMsg没有处理连接方法 ";
+                    Console.WriteLine(str + methodName);
+                    return;
+                }
+                Object[] obj = new Object[] { conn, protoBase };
+                Console.WriteLine("[处理连接消息]" + conn.GetAddress() + " :" + name);
+                mm.Invoke(handleConnMsg, obj);
+            }
+            //角色协议分发
+            else {
+                MethodInfo mm = handlePlayerMsg.GetType().GetMethod(methodName);
+                if (mm == null) {
+                    string str = "[警告]HandleMsg没有处理玩家方法";
+                    Console.WriteLine(str + methodName);
+                    return;
+                }
+                Object[] obj = new Object[] { conn, protoBase };
+                Console.WriteLine("[处理玩家消息]" + conn.GetAddress() + " :" + name);
+                mm.Invoke(handlePlayerMsg, obj);
+            }
+
+
+            //Console.WriteLine("[收到协议]" + name);
+            ////处理心跳
+            //if (name == "HeartBeat") {
+            //    Console.WriteLine("更新心跳时间" + conn.GetAddress());
+            //    conn.lastTickTime = Sys.GetTimeStamp();
+            //}
+            ////回射
+            //Send(conn, protoBase);
+        }
+
+        public void Send(Conn conn, ProtocolBase protocol) {
+            byte[] bytes = protocol.Encode();
             byte[] length = BitConverter.GetBytes(bytes.Length);
             byte[] sendbuff = length.Concat(bytes).ToArray();
             try {
@@ -192,6 +240,19 @@ namespace NetGameServer {
             }
             catch (Exception e) {
                 Console.WriteLine("[发送消息]" + conn.GetAddress() + ":" + e.Message);
+            }
+        }
+
+        // 广播
+        public void Broadcast(ProtocolBase protocol) {
+            for (int i = 0; i < conns.Length; i++) {
+                if (!conns[i].isUse) {
+                    continue;
+                }
+                if (conns[i].player == null) {
+                    continue;
+                }
+                Send(conns[i], protocol);
             }
         }
     }

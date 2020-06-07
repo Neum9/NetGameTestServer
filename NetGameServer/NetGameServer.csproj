@@ -50,8 +50,11 @@
     <Compile Include="core\Conn.cs" />
     <Compile Include="core\DataMgr.cs" />
     <Compile Include="core\Player.cs" />
+    <Compile Include="core\ProtocolBase.cs" />
+    <Compile Include="core\ProtocolBytes.cs" />
     <Compile Include="core\ServNet.cs" />
     <Compile Include="core\Sys.cs" />
+    <Compile Include="logic\HandlePlayerEvent.cs" />
     <Compile Include="logic\PlayerTempData.cs" />
     <Compile Include="logic\PlayerData.cs" />
     <Compile Include="Program.cs" />
