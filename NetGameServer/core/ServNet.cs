@@ -45,8 +45,7 @@ namespace NetGameServer {
                 if (conns[i] == null) {
                     conns[i] = new Conn();
                     return i;
-                }
-                else if (conns[i].isUse == false) {
+                } else if (conns[i].isUse == false) {
                     return i;
                 }
             }
@@ -81,7 +80,7 @@ namespace NetGameServer {
             timer.Start();
         }
         public void HeartBeat() {
-            Console.WriteLine("[主定时器执行]");
+            //Console.WriteLine("[主定时器执行]");
             long timeNow = Sys.GetTimeStamp();
             for (int i = 0; i < conns.Length; i++) {
                 Conn conn = conns[i];
@@ -109,8 +108,7 @@ namespace NetGameServer {
                 if (index < 0) {
                     socket.Close();
                     Console.WriteLine("[警告]连接已满!");
-                }
-                else {
+                } else {
                     Conn conn = conns[index];
                     conn.Init(socket);
                     string adr = conn.GetAddress();
@@ -118,8 +116,7 @@ namespace NetGameServer {
                     conn.socket.BeginReceive(conn.readBuff, conn.buffCount, conn.BuffRemain(), SocketFlags.None, ReceiveCb, conn);
                     listenfd.BeginAccept(AcceptCb, null);
                 }
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
 
                 Console.WriteLine("AcceptCB失败:" + e.Message);
             }
@@ -155,8 +152,8 @@ namespace NetGameServer {
                     ProcessData(conn);
                     //继续接收
                     conn.socket.BeginReceive(conn.readBuff, conn.buffCount, conn.BuffRemain(), SocketFlags.None, ReceiveCb, conn);
-                }
-                catch (Exception e) {
+                } catch (Exception e) {
+                    Console.WriteLine("[ReceiveCb Error!]" + e.Message);
                     Console.WriteLine("收到 [" + conn.GetAddress() + "] 断开连接");
                     conn.Close();
                 }
@@ -199,7 +196,7 @@ namespace NetGameServer {
             if (conn.player == null || name == "HeartBeat" || name == "Logout") {
                 MethodInfo mm = handleConnMsg.GetType().GetMethod(methodName);
                 if (mm == null) {
-                    string str = "[警告]HandleMsg没有处理连接方法 ";
+                    string str = "[警告]HandleMsg没有处理该连接方法 ";
                     Console.WriteLine(str + methodName);
                     return;
                 }
@@ -211,11 +208,11 @@ namespace NetGameServer {
             else {
                 MethodInfo mm = handlePlayerMsg.GetType().GetMethod(methodName);
                 if (mm == null) {
-                    string str = "[警告]HandleMsg没有处理玩家方法";
+                    string str = "[警告]HandleMsg没有处理改玩家方法";
                     Console.WriteLine(str + methodName);
                     return;
                 }
-                Object[] obj = new Object[] { conn, protoBase };
+                Object[] obj = new Object[] { conn.player, protoBase };
                 Console.WriteLine("[处理玩家消息]" + conn.GetAddress() + " :" + name);
                 mm.Invoke(handlePlayerMsg, obj);
             }
@@ -237,8 +234,7 @@ namespace NetGameServer {
             byte[] sendbuff = length.Concat(bytes).ToArray();
             try {
                 conn.socket.BeginSend(sendbuff, 0, sendbuff.Length, SocketFlags.None, null, null);
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 Console.WriteLine("[发送消息]" + conn.GetAddress() + ":" + e.Message);
             }
         }
@@ -253,6 +249,25 @@ namespace NetGameServer {
                     continue;
                 }
                 Send(conns[i], protocol);
+            }
+        }
+
+        //打印信息
+        public void Print() {
+            Console.WriteLine("===服务器登录信息===");
+            for (int i = 0; i < conns.Length; i++) {
+                if (conns[i] == null) {
+                    continue;
+                }
+                if (!conns[i].isUse) {
+                    continue;
+                }
+
+                string str = " 连接 [" + conns[i].GetAddress() + "] ";
+                if (conns[i].player != null) {
+                    str += "玩家id " + conns[i].player.id;
+                }
+                Console.WriteLine("str");
             }
         }
     }

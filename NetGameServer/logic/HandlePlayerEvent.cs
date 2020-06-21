@@ -21,7 +21,7 @@ namespace NetGameServer {
     partial class HandleConnMsg {
         //心跳
         //协议参数:无
-        public void MsgHeatBeat(Conn conn, ProtocolBase protoBase) {
+        public void MsgHeartBeat(Conn conn, ProtocolBase protoBase) {
             conn.lastTickTime = Sys.GetTimeStamp();
             Console.WriteLine("[更新心跳时间]" + conn.GetAddress());
         }
@@ -56,7 +56,7 @@ namespace NetGameServer {
         //登录
         //协议参数:str用户名,str密码
         //返回协议:-1表示失败 0表示成功
-        public void MsgLogin(Conn conn,ProtocolBase protoBase) {
+        public void MsgLogin(Conn conn, ProtocolBase protoBase) {
             //获取数值
             int start = 0;
             ProtocolBytes protocol = (ProtocolBytes)protoBase;
@@ -69,18 +69,75 @@ namespace NetGameServer {
             ProtocolBytes protocolRet = new ProtocolBytes();
             protocolRet.AddString("Login");
             //验证
-            if (!DataMgr.instance.CheckPassWord(id,pw)) {
+            if (!DataMgr.instance.CheckPassWord(id, pw)) {
                 protocolRet.AddInt(-1);
                 conn.Send(protocolRet);
                 return;
             }
             //是否已经登录
-            //TODOCJc
+            ProtocolBytes protocolLogout = new ProtocolBytes();
+            protocolLogout.AddString("Logout");
+            if (!Player.KickOff(id, protocolLogout)) {
+                protocol.AddInt(-1);
+                conn.Send(protocolRet);
+                return;
+            }
+            //获取玩家数据
+            PlayerData playerData = DataMgr.instance.GetPlayerData(id);
+            if (playerData == null) {
+                protocolRet.AddInt(-1);
+                conn.Send(protocolRet);
+                return;
+            }
+            conn.player = new Player(id, conn);
+            conn.player.data = playerData;
+            //事件触发
+            ServNet.instance.handlePlayerEvent.OnLogin(conn.player);
+            //返回
+            protocolRet.AddInt(0);
+            conn.Send(protocolRet);
+            return;
+        }
+
+        //下线
+        //协议参数:
+        //返回协议:0-正常下线
+        public void MsgLogout(Conn conn, ProtocolBase protoBase) {
+            ProtocolBytes protocol = new ProtocolBytes();
+            protocol.AddString("Logout");
+            protocol.AddInt(0);
+            if (conn.player == null) {
+                conn.Send(protocol);
+                conn.Close();
+            } else {
+                conn.Send(protocol);
+                conn.player.Logout();
+            }
         }
     }
 
     // 处理角色协议
     class HandlePlayerMsg {
+        //获取分数
+        //协议参数
+        //返回协议:int分数
+        public void MsgGetScore(Player player, ProtocolBase protoBase) {
+            ProtocolBytes protocolRet = new ProtocolBytes();
+            protocolRet.AddString("GetScore");
+            protocolRet.AddInt(player.data.score);
+            player.Send(protocolRet);
+            Console.WriteLine("MsgGetScore" + player.id + player.data.score);
+        }
 
+        //增加分数
+        public void MsgAddScore(Player player,ProtocolBase protoBase) {
+            //获取数值
+            int start = 0;
+            ProtocolBytes protocol = (ProtocolBytes)protoBase;
+            string protoName = protocol.GetString(start, ref start);
+            //处理
+            player.data.score += 1;
+            Console.WriteLine("MsgAddScore " + player.id + " " + player.data.score.ToString());
+        }
     }
 }

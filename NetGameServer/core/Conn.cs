@@ -52,8 +52,7 @@ namespace NetGameServer {
                 return;
             }
             if (player != null) {
-                //TODOCjc 玩家退出处理
-                //player.Logout();
+                player.Logout();
                 return;
             }
             Console.WriteLine("断开连接 " + GetAddress());
@@ -61,13 +60,9 @@ namespace NetGameServer {
             socket.Close();
             isUse = false;
         }
-
-        //TODOCjc
-        internal void Send(ProtocolBytes protocol) {
-            throw new NotImplementedException();
+        
+        public void Send(ProtocolBytes protocol) {
+            ServNet.instance.Send(this, protocol);
         }
-
-        //TODOCjc 发送协议
-
     }
 }

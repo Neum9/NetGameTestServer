@@ -56,8 +56,8 @@ namespace NetGameServer {
         //下线
         public bool Logout() {
             //事件处理
-            //TODOCJc
-            //ServNet.instance
+
+            ServNet.instance.handlePlayerEvent.OnLogout(this);
 
             // 保存
             if (!DataMgr.instance.SavePlayer(this)) {
