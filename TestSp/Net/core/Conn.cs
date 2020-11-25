@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Sproto;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -20,6 +22,12 @@ class Conn
     public Int32 msgLength = 0;
     //心跳时间
     public long lastTickTime = long.MinValue;
+
+    //add
+    public SprotoStream sendStream = new SprotoStream();
+    public SprotoStream recvStream = new SprotoStream();
+
+    private static ProtocolFunctionDictionary protocol = Protocol.Instance.Protocol;
 
     //构造函数
     public Conn() {
@@ -64,5 +72,79 @@ class Conn
     //public void Send(ProtocolBytes protocol) {
     //    ServNet.instance.Send(this, protocol);
     //}
+
+    public int receivePosition;
+
+    public void ProcessData() {
+        int i = recvStream.Position;
+        while (receivePosition >= i + 2) {
+            int length = (recvStream[i] << 8) | recvStream[i + 1];
+
+            int sz = length + 2;
+            if (receivePosition < i + sz) {
+                break;
+            }
+
+            recvStream.Seek(2, SeekOrigin.Current);
+
+            if (length > 0) {
+                byte[] data = new byte[length];
+                recvStream.Read(data, 0, length);
+                NetCore.Enqueue(data);
+            }
+
+            i += sz;
+        }
+
+        if (receivePosition == recvStream.Buffer.Length) {
+            recvStream.Seek(0, SeekOrigin.End);
+            recvStream.MoveUp(i, i);
+            receivePosition = recvStream.Position;
+            recvStream.Seek(0, SeekOrigin.Begin);
+        }
+    }
+
+    public static void Send<T>(SprotoTypeBase rpc = null, long? session = null) {
+        Send(rpc, session, protocol[typeof(T)]);
+    }
+
+    private static int MAX_PACK_LEN = (1 << 16) - 1;
+    private static void Send(SprotoTypeBase rpc, long? session, int tag) {
+        if (!connected || !enabled) {
+            return;
+        }
+
+        package pkg = new package();
+        pkg.type = tag;
+
+        if (session != null) {
+            pkg.session = (long)session;
+            sessionDict.Add((long)session, protocol[tag].Response.Value);
+        }
+
+        sendStream.Seek(0, SeekOrigin.Begin);
+        int len = pkg.encode(sendStream);
+        if (rpc != null) {
+            len += rpc.encode(sendStream);
+        }
+
+        byte[] data = sendPack.pack(sendStream.Buffer, len);
+        if (data.Length > MAX_PACK_LEN) {
+            Console.WriteLine("data.Length > " + MAX_PACK_LEN + " => " + data.Length);
+            return;
+        }
+
+        sendStream.Seek(0, SeekOrigin.Begin);
+        sendStream.WriteByte((byte)(data.Length >> 8));
+        sendStream.WriteByte((byte)data.Length);
+        sendStream.Write(data, 0, data.Length);
+
+        try {
+            socket.Send(sendStream.Buffer, sendStream.Position, SocketFlags.None);
+        }
+        catch (Exception e) {
+            Console.WriteLine(e.ToString());
+        }
+    }
 }
 

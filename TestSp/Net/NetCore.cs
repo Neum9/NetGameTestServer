@@ -138,24 +138,28 @@ public class NetCore
 
         lock (conn) {
 
-            try
-            {
-                int count = conn.socket.EndReceive(ar);
-                if (count <= 0) {
-                    Console.Write("收到 [" + conn.GetAddress() + "] 断开连接!");
-                    conn.Close();
-                    return;
-                }
-
-                conn.buffCount += count;
-                ProcessData(conn);
-                conn.socket.BeginReceive(conn.readBuff, conn.buffCount, conn.BuffRemain(), SocketFlags.None, Receive, conn);
+            if (!connected) {
+                return;
             }
-            catch (System.Exception ex)
-            {
-                Console.WriteLine("[ReceiveCb Error!]" + ex.Message);
-                Console.WriteLine("收到 [" + conn.GetAddress() + "] 断开连接");
-                conn.Close();
+
+            if (ar != null) {
+                try {
+                    conn.receivePosition += conn.socket.EndReceive(ar);
+                }
+                catch (Exception e) {
+                    Console.WriteLine(e.ToString());
+                }
+            }
+
+            conn.ProcessData();
+
+            try {
+                conn.socket.BeginReceive(conn.recvStream.Buffer, conn.receivePosition,
+                    conn.recvStream.Buffer.Length - conn.receivePosition,
+                    SocketFlags.None, receiveCallback, conn);
+            }
+            catch (Exception e) {
+                Console.WriteLine(e.ToString());
             }
         }
 
@@ -203,7 +207,9 @@ public class NetCore
             Conn conn = new Conn();
             conn.Init(socket);
             string adr = conn.GetAddress();
-            conn.socket.BeginReceive(conn.readBuff, conn.buffCount, conn.BuffRemain(), SocketFlags.None, Receive, conn);
+            conn.socket.BeginReceive(conn.recvStream.Buffer, conn.receivePosition,
+                conn.recvStream.Buffer.Length - conn.receivePosition,
+                SocketFlags.None, receiveCallback, conn);
             listenfd.BeginAccept(AcceptCb, null);
         }
         catch (Exception e) {
@@ -212,32 +218,7 @@ public class NetCore
         }
     }
 
-    private static void ProcessData(Conn conn) {
-        int i = recvStream.Position;
-        while (receivePosition >= i + 2) {
-            int length = (recvStream[i] << 8) | recvStream[i + 1];
-
-            int sz = length + 2;
-            if (receivePosition < i + sz) {
-                break;
-            }
-
-            recvStream.Seek(2, SeekOrigin.Current);
-
-            if (length > 0) {
-                byte[] data = new byte[length];
-                recvStream.Read(data, 0, length);
-                recvQueue.Enqueue(data);
-            }
-
-            i += sz;
-        }
-
-        if (receivePosition == recvStream.Buffer.Length) {
-            recvStream.Seek(0, SeekOrigin.End);
-            recvStream.MoveUp(i, i);
-            receivePosition = recvStream.Position;
-            recvStream.Seek(0, SeekOrigin.Begin);
-        }
+    public static void Enqueue(byte[] data) {
+        recvQueue.Enqueue(data);
     }
 }
