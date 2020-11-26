@@ -1,4 +1,5 @@
 ﻿using Sproto;
+using SprotoType;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -7,19 +8,14 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
-class Conn
+public class Conn
 {
     //常量
     public const int BUFFER_SIZE = 1024;
     //Socket
     public Socket socket;
     public bool isUse = false;
-    //Buff
-    public byte[] readBuff = new byte[BUFFER_SIZE];
-    public int buffCount = 0;
-    //粘包分包
-    public byte[] lenByte = new byte[sizeof(UInt32)];
-    public Int32 msgLength = 0;
+
     //心跳时间
     public long lastTickTime = long.MinValue;
 
@@ -28,22 +24,17 @@ class Conn
     public SprotoStream recvStream = new SprotoStream();
 
     private static ProtocolFunctionDictionary protocol = Protocol.Instance.Protocol;
+    private static SprotoPack sendPack = new SprotoPack();
 
     //构造函数
     public Conn() {
-        readBuff = new byte[BUFFER_SIZE];
     }
     //初始化
     public void Init(Socket socket) {
         this.socket = socket;
         isUse = true;
-        buffCount = 0;
         //心跳处理,稍后实现GetTimeStamp方法 TODOCjc
         //lastTickTime = Sys.GetTimeStamp();
-    }
-    // 剩余的Buff
-    public int BuffRemain() {
-        return BUFFER_SIZE - buffCount;
     }
     //获取客户端地址
     public string GetAddress() {
@@ -68,10 +59,6 @@ class Conn
         isUse = false;
     }
 
-    //TODOCjc
-    //public void Send(ProtocolBytes protocol) {
-    //    ServNet.instance.Send(this, protocol);
-    //}
 
     public int receivePosition;
 
@@ -90,7 +77,7 @@ class Conn
             if (length > 0) {
                 byte[] data = new byte[length];
                 recvStream.Read(data, 0, length);
-                NetCore.Enqueue(data);
+                NetCore.Enqueue(this, data);
             }
 
             i += sz;
@@ -104,22 +91,19 @@ class Conn
         }
     }
 
-    public static void Send<T>(SprotoTypeBase rpc = null, long? session = null) {
+    public void Send<T>(SprotoTypeBase rpc = null, long? session = null) {
         Send(rpc, session, protocol[typeof(T)]);
     }
 
     private static int MAX_PACK_LEN = (1 << 16) - 1;
-    private static void Send(SprotoTypeBase rpc, long? session, int tag) {
-        if (!connected || !enabled) {
-            return;
-        }
+    public void Send(SprotoTypeBase rpc, long? session, int tag) {
 
         package pkg = new package();
         pkg.type = tag;
 
         if (session != null) {
             pkg.session = (long)session;
-            sessionDict.Add((long)session, protocol[tag].Response.Value);
+            NetCore.RecordSession((long)session, protocol[tag].Response.Value);
         }
 
         sendStream.Seek(0, SeekOrigin.Begin);

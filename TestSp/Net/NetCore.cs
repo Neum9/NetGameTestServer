@@ -11,6 +11,12 @@ public delegate void SocketConnected();
 
 public class NetCore
 {
+    private struct ConnPair
+    {
+        public Conn conn;
+        public byte[] data;
+    }
+
     private static Socket listenfd;
 
     public static bool logined;
@@ -19,18 +25,15 @@ public class NetCore
     private static int CONNECT_TIMEOUT = 3000;
     private static ManualResetEvent TimeoutObject;
 
-    private static Queue<byte[]> recvQueue = new Queue<byte[]>();
+    private static Queue<ConnPair> recvQueue = new Queue<ConnPair>();
 
-    private static SprotoPack sendPack = new SprotoPack();
     private static SprotoPack recvPack = new SprotoPack();
 
-    private static SprotoStream sendStream = new SprotoStream();
     private static SprotoStream recvStream = new SprotoStream();
 
     private static ProtocolFunctionDictionary protocol = Protocol.Instance.Protocol;
     private static Dictionary<long, ProtocolFunctionDictionary.typeFunc> sessionDict;
 
-    private static AsyncCallback connectCallback = new AsyncCallback(Connected);
     private static AsyncCallback receiveCallback = new AsyncCallback(Receive);
 
     public static void Init() {
@@ -42,93 +45,12 @@ public class NetCore
     }
 
     public static void StartServer(string address, int port) {
-        Disconnect();
         listenfd = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         IPAddress ipAdr = IPAddress.Parse(address);
         IPEndPoint ipEp = new IPEndPoint(ipAdr, port);
         listenfd.Bind(ipEp);
         listenfd.Listen(0);
         listenfd.BeginAccept(AcceptCb, null);
-
-        Receive();
-    }
-
-    public static void Connect(string host, int port, SocketConnected socketConnected) {
-        Disconnect();
-
-        socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        socket.BeginConnect(host, port, connectCallback, socket);
-
-        TimeoutObject = new ManualResetEvent(false);
-        TimeoutObject.Reset();
-
-        if (TimeoutObject.WaitOne(CONNECT_TIMEOUT, false)) {
-            Receive();
-            socketConnected();
-        }
-        else {
-            Console.WriteLine("Connect Timeout");
-        }
-    }
-
-    private static void Connected(IAsyncResult ar) {
-        socket.EndConnect(ar);
-        TimeoutObject.Set();
-    }
-
-    public static void Disconnect() {
-        if (connected) {
-            socket.Close();
-        }
-    }
-
-    public static bool connected {
-        get {
-            return socket != null && socket.Connected;
-        }
-    }
-
-    public static void Send<T>(SprotoTypeBase rpc = null, long? session = null) {
-        Send(rpc, session, protocol[typeof(T)]);
-    }
-
-    private static int MAX_PACK_LEN = (1 << 16) - 1;
-    private static void Send(SprotoTypeBase rpc, long? session, int tag) {
-        if (!connected || !enabled) {
-            return;
-        }
-
-        package pkg = new package();
-        pkg.type = tag;
-
-        if (session != null) {
-            pkg.session = (long)session;
-            sessionDict.Add((long)session, protocol[tag].Response.Value);
-        }
-
-        sendStream.Seek(0, SeekOrigin.Begin);
-        int len = pkg.encode(sendStream);
-        if (rpc != null) {
-            len += rpc.encode(sendStream);
-        }
-
-        byte[] data = sendPack.pack(sendStream.Buffer, len);
-        if (data.Length > MAX_PACK_LEN) {
-            Console.WriteLine("data.Length > " + MAX_PACK_LEN + " => " + data.Length);
-            return;
-        }
-
-        sendStream.Seek(0, SeekOrigin.Begin);
-        sendStream.WriteByte((byte)(data.Length >> 8));
-        sendStream.WriteByte((byte)data.Length);
-        sendStream.Write(data, 0, data.Length);
-
-        try {
-            socket.Send(sendStream.Buffer, sendStream.Position, SocketFlags.None);
-        }
-        catch (Exception e) {
-            Console.WriteLine(e.ToString());
-        }
     }
 
     //private static int receivePosition;
@@ -137,11 +59,6 @@ public class NetCore
         Conn conn = (Conn)ar.AsyncState;
 
         lock (conn) {
-
-            if (!connected) {
-                return;
-            }
-
             if (ar != null) {
                 try {
                     conn.receivePosition += conn.socket.EndReceive(ar);
@@ -174,7 +91,8 @@ public class NetCore
         }
 
         while (recvQueue.Count > 0) {
-            byte[] data = recvPack.unpack(recvQueue.Dequeue());
+            ConnPair connPair = recvQueue.Dequeue();
+            byte[] data = recvPack.unpack(connPair.data);
             int offset = pkg.init(data);
 
             int tag = (int)pkg.type;
@@ -185,7 +103,7 @@ public class NetCore
                 if (rpcReqHandler != null) {
                     SprotoTypeBase rpcRsp = rpcReqHandler(protocol.GenRequest(tag, data, offset));
                     if (pkg.HasSession) {
-                        Send(rpcRsp, session, tag);
+                        connPair.conn.Send(rpcRsp, session, tag);
                     }
                 }
             }
@@ -218,7 +136,10 @@ public class NetCore
         }
     }
 
-    public static void Enqueue(byte[] data) {
-        recvQueue.Enqueue(data);
+    public static void Enqueue(Conn conn, byte[] data) {
+        recvQueue.Enqueue(new ConnPair() { data = data, conn = conn });
+    }
+    public static void RecordSession(long session, ProtocolFunctionDictionary.typeFunc typeFunc) {
+        sessionDict.Add(session, typeFunc);
     }
 }

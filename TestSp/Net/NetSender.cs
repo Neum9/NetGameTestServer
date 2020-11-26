@@ -13,19 +13,19 @@ public class NetSender
         rpcRspHandlerDict = new Dictionary<long, RpcRspHandler>();
     }
 
-    public static void Send<T>(SprotoTypeBase rpcReq = null, RpcRspHandler rpcRspHandler = null)
-    {
-        if (rpcRspHandler != null)
-        {
-            session++;
-            AddHandler(session, rpcRspHandler);
-            NetCore.Send<T>(rpcReq, session);
-        }
-        else
-        {
-            NetCore.Send<T>(rpcReq);
-        }
-    }
+    //public static void Send<T>(SprotoTypeBase rpcReq = null, RpcRspHandler rpcRspHandler = null)
+    //{
+    //    if (rpcRspHandler != null)
+    //    {
+    //        session++;
+    //        AddHandler(session, rpcRspHandler);
+    //        NetCore.Send<T>(rpcReq, session);
+    //    }
+    //    else
+    //    {
+    //        NetCore.Send<T>(rpcReq);
+    //    }
+    //}
 
     private static void AddHandler(long session, RpcRspHandler rpcRspHandler)
     {
