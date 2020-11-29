@@ -36,6 +36,12 @@ public class NetCore
 
     private static AsyncCallback receiveCallback = new AsyncCallback(Receive);
 
+    //add
+    //客户端连接
+    public static Conn[] conns;
+    //最大连接数
+    public static int maxConn = 50;
+
     public static void Init() {
         byte[] receiveBuffer = new byte[1 << 16];
         recvStream.Write(receiveBuffer, 0, receiveBuffer.Length);
@@ -44,7 +50,30 @@ public class NetCore
         sessionDict = new Dictionary<long, ProtocolFunctionDictionary.typeFunc>();
     }
 
+    //获取连接池索引 返回负数表示获取失败
+    public static int NewIndex() {
+        if (conns == null) {
+            return -1;
+        }
+        for (int i = 0; i < conns.Length; i++) {
+            if (conns[i] == null) {
+                conns[i] = new Conn();
+                return i;
+            }
+            else if (conns[i].isUse == false) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     public static void StartServer(string address, int port) {
+        //连接池
+        conns = new Conn[maxConn];
+        for (int i = 0; i < maxConn; i++) {
+            conns[i] = new Conn();
+        }
+
         listenfd = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         IPAddress ipAdr = IPAddress.Parse(address);
         IPEndPoint ipEp = new IPEndPoint(ipAdr, port);
@@ -53,20 +82,18 @@ public class NetCore
         listenfd.BeginAccept(AcceptCb, null);
     }
 
-    //private static int receivePosition;
     public static void Receive(IAsyncResult ar = null) {
 
         Conn conn = (Conn)ar.AsyncState;
 
         lock (conn) {
-            if (ar != null) {
-                try {
-                    conn.receivePosition += conn.socket.EndReceive(ar);
-                }
-                catch (Exception e) {
-                    Console.WriteLine(e.ToString());
-                }
+            try {
+                conn.receivePosition += conn.socket.EndReceive(ar);
             }
+            catch (Exception e) {
+                Console.WriteLine(e.ToString());
+            }
+
 
             conn.ProcessData();
 
@@ -91,6 +118,7 @@ public class NetCore
         }
 
         while (recvQueue.Count > 0) {
+            Console.WriteLine("dequeue one!");
             ConnPair connPair = recvQueue.Dequeue();
             byte[] data = recvPack.unpack(connPair.data);
             int offset = pkg.init(data);
@@ -101,10 +129,10 @@ public class NetCore
             if (pkg.HasType) {
                 RpcReqHandler rpcReqHandler = NetReceiver.GetHandler(tag);
                 if (rpcReqHandler != null) {
-                    SprotoTypeBase rpcRsp = rpcReqHandler(protocol.GenRequest(tag, data, offset));
-                    if (pkg.HasSession) {
-                        connPair.conn.Send(rpcRsp, session, tag);
-                    }
+                    SprotoTypeBase rpcRsp = rpcReqHandler(protocol.GenRequest(tag, data, offset), session);
+                    //if (pkg.HasSession) {
+                    //    connPair.conn.Send(rpcRsp, session, tag);
+                    //}
                 }
             }
             else {
@@ -121,8 +149,11 @@ public class NetCore
     private static void AcceptCb(IAsyncResult ar) {
         try {
             Socket socket = listenfd.EndAccept(ar);
+            Console.WriteLine("客户端连入!");
 
-            Conn conn = new Conn();
+            int index = NewIndex();
+
+            Conn conn = conns[index];
             conn.Init(socket);
             string adr = conn.GetAddress();
             conn.socket.BeginReceive(conn.recvStream.Buffer, conn.receivePosition,

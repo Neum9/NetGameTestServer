@@ -8,40 +8,32 @@ public class NetSender
     private static long session;
     private static Dictionary<long, RpcRspHandler> rpcRspHandlerDict;
 
-    public static void Init()
-    {
+    public static void Init() {
         rpcRspHandlerDict = new Dictionary<long, RpcRspHandler>();
     }
 
-    //public static void Send<T>(SprotoTypeBase rpcReq = null, RpcRspHandler rpcRspHandler = null)
-    //{
-    //    if (rpcRspHandler != null)
-    //    {
+    //public static void Send<T>(Conn conn, SprotoTypeBase rpcReq = null, RpcRspHandler rpcRspHandler = null) {
+    //    if (rpcRspHandler != null) {
     //        session++;
     //        AddHandler(session, rpcRspHandler);
-    //        NetCore.Send<T>(rpcReq, session);
+    //        NetCore.Send<T>(conn, rpcReq, session);
     //    }
-    //    else
-    //    {
-    //        NetCore.Send<T>(rpcReq);
+    //    else {
+    //        NetCore.Send<T>(conn, rpcReq);
     //    }
     //}
 
-    private static void AddHandler(long session, RpcRspHandler rpcRspHandler)
-    {
+    private static void AddHandler(long session, RpcRspHandler rpcRspHandler) {
         rpcRspHandlerDict.Add(session, rpcRspHandler);
     }
 
-    private static void RemoveHandler(long session)
-    {
-        if (rpcRspHandlerDict.ContainsKey(session))
-        {
+    private static void RemoveHandler(long session) {
+        if (rpcRspHandlerDict.ContainsKey(session)) {
             rpcRspHandlerDict.Remove(session);
         }
     }
 
-    public static RpcRspHandler GetHandler(long session)
-    {
+    public static RpcRspHandler GetHandler(long session) {
         RpcRspHandler rpcRspHandler;
         rpcRspHandlerDict.TryGetValue(session, out rpcRspHandler);
         RemoveHandler(session);

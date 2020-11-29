@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Sproto;
 
-public delegate SprotoTypeBase RpcReqHandler(SprotoTypeBase rpcReq);
+public delegate SprotoTypeBase RpcReqHandler(SprotoTypeBase rpcReq,long session);
 
 public class NetReceiver
 {
