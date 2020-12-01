@@ -1,4 +1,5 @@
 ﻿// 事件管理器
+using Sproto;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -44,24 +45,26 @@ public class EventManager
         } 
     }
 
-    private event EventHandler netRecv;
+    public delegate void EventNet(SprotoTypeBase sp);
 
-    private Dictionary<EVENTKEY, EventHandler> m_dict = new Dictionary<EVENTKEY, EventHandler>();
+    private event EventNet eventNet;
+
+    private Dictionary<EVENTKEY, EventNet> m_dict = new Dictionary<EVENTKEY, EventNet>();
 
     public EventManager() {
         RegisterEvent();
     }
 
     private void RegisterEvent() {
-        m_dict.Add(EVENTKEY.net_Recv, netRecv);
+        m_dict.Add(EVENTKEY.net_Recv, eventNet);
     }
 
-    public void FireEvent(EVENTKEY key,object sender,EventArgs args) {
-        m_dict[key]?.Invoke(sender, args);
+    public void FireEvent(EVENTKEY key,SprotoTypeBase sp) {
+        m_dict[key]?.Invoke(sp);
     }
 
-    public void AddHandler(EVENTKEY key,EventHandler handler) {
-        EventHandler evt = m_dict[key];
+    public void AddHandler(EVENTKEY key, EventNet handler) {
+        EventNet evt = m_dict[key];
         if (evt != null) {
             evt += handler;
         }
