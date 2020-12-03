@@ -40,7 +40,7 @@ public class Conn
     //构造函数
     public Conn() {
         readBuff = new byte[BUFFER_SIZE];
-        OnMsg();
+        
     }
     //初始化
     public void Init(Socket socket) {
@@ -49,6 +49,7 @@ public class Conn
         buffCount = 0;
         //心跳处理,稍后实现GetTimeStamp方法
         lastTickTime = Sys.GetTimeStamp();
+        OnMsg();
     }
     // 剩余的Buff
     public int BuffRemain() {
@@ -146,15 +147,15 @@ public class Conn
     }
 
     public void OnMsg() {
-        NetReceiver.AddHandler<Protocol.foobar>(OnFoorbar);
+        EventManager.instance.AddHandler(EVENTKEY.net_Recv, OnFoorbar);
+
     }
 
     // 处理消息
-    public SprotoTypeBase OnFoorbar(SprotoTypeBase sp, long session) {
+    public void OnFoorbar(SprotoTypeBase sp, long session) {
         SprotoType.foobar.response obj2 = new SprotoType.foobar.response();
         obj2.ok = true;
         Send(obj2, session, null);
-        return null;
     }
 }
 

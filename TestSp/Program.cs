@@ -24,6 +24,8 @@ namespace TestSp
             NetReceiver.Init();
             NetCore.Init();
 
+            InitMgr();
+
             NetCore.logined = true;
             NetCore.enabled = true;
 
@@ -43,11 +45,11 @@ namespace TestSp
         }
 
         static void InitMgr() {
-            // event 
+
+
             NetReceiver.AddHandler<Protocol.foobar>(
                 (SprotoTypeBase sp, long session) => {
-                    //EventManager.instance.Dispatch(EVENTKEY.net_Recv)
-                    //EventManager.instance.netRecv(null,null);
+                    EventManager.instance.FireEvent(EVENTKEY.net_Recv, sp, session);
                     return null;
                 }
                 );
