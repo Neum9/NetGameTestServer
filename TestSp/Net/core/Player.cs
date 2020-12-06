@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sproto;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,52 +14,44 @@ public class Player
     ////临时数据
     //public PlayerTempData tempData;
 
+    private delegate void onNet(SprotoTypeBase sp, long session);
+    private Dictionary<int, onNet> m_onNetList;
+
     //构造函数
     public Player(string id, Conn conn) {
         this.id = id;
         this.conn = conn;
+        initMsg();
         //tempData = new PlayerTempData();
     }
 
 
-    ////踢下线
-    //public static bool KickOff(string id, ProtocolBase proto) {
-    //    Conn[] conns = ServNet.instance.conns;
-    //    for (int i = 0; i < conns.Length; i++) {
-    //        if (conns[i] == null) {
-    //            continue;
-    //        }
-    //        if (!conns[i].isUse) {
-    //            continue;
-    //        }
-    //        if (conns[i].player == null) {
-    //            continue;
-    //        }
-    //        if (conns[i].player.id == id) {
-    //            lock (conns[i].player) {
-    //                if (proto != null) {
-    //                    conns[i].player.Send(proto);
-    //                }
-    //                return conns[i].player.Logout();
-    //            }
-    //        }
-    //    }
-    //    return true;
-    //}
+    public void initMsg() {
+        m_onNetList = new Dictionary<int, onNet>();
+        m_onNetList.Add(Protocol.foobar.Tag, onFoobar);
+        m_onNetList.Add(Protocol.playopt.Tag, OnPlayOpt);
+    }
 
-    ////下线
-    //public bool Logout() {
-    //    //事件处理
+    public void OnMsg() {
+        EventManager.instance.AddHandler(EVENTKEY.net_Recv, OnNetRecv);
+    }
 
-    //    ServNet.instance.handlePlayerEvent.OnLogout(this);
-
-    //    // 保存
-    //    if (!DataMgr.instance.SavePlayer(this)) {
-    //        return false;
-    //    }
-    //    // 下线
-    //    conn.player = null;
-    //    conn.Close();
-    //    return true;
-    //}
+    // 处理消息
+    public void OnNetRecv(SprotoTypeBase sp, long session, int tag) {
+        m_onNetList[tag](sp, session);
+    }
+    public void onFoobar(SprotoTypeBase sp, long session) {
+        SprotoType.foobar.response obj2 = new SprotoType.foobar.response();
+        obj2.ok = true;
+        conn.Send(obj2, session, null);
+    }
+    public void OnPlayOpt(SprotoTypeBase sp, long session) {
+        SprotoType.playopt.request req = sp as SprotoType.playopt.request;
+        SprotoType.playopt.response resp = new SprotoType.playopt.response();
+        resp.ret = 0;
+        resp.optUnit = req.optUnit;
+        Console.WriteLine("OnPlayOpt: type :" + resp.optUnit.type + " value: " + resp.optUnit.param);
+        Console.WriteLine("OnPlayOpt session " + session);
+        conn.Send(resp, session, null);
+    }
 }

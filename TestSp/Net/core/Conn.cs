@@ -37,19 +37,24 @@ public class Conn
 
     public int receivePosition;
 
+    public int m_index;
+
     //构造函数
     public Conn() {
         readBuff = new byte[BUFFER_SIZE];
-        
+
     }
     //初始化
-    public void Init(Socket socket) {
+    public void Init(Socket socket, int index) {
         this.socket = socket;
+        m_index = index;
         isUse = true;
         buffCount = 0;
         //心跳处理,稍后实现GetTimeStamp方法
         lastTickTime = Sys.GetTimeStamp();
-        OnMsg();
+        //TODOCJc 应该在登录的时候new
+        player = new Player(m_index.ToString(), this);
+        player.OnMsg();
     }
     // 剩余的Buff
     public int BuffRemain() {
@@ -146,16 +151,5 @@ public class Conn
         }
     }
 
-    public void OnMsg() {
-        EventManager.instance.AddHandler(EVENTKEY.net_Recv, OnFoorbar);
-
-    }
-
-    // 处理消息
-    public void OnFoorbar(SprotoTypeBase sp, long session) {
-        SprotoType.foobar.response obj2 = new SprotoType.foobar.response();
-        obj2.ok = true;
-        Send(obj2, session, null);
-    }
 }
 

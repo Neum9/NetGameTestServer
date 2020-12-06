@@ -88,7 +88,14 @@ public class NetCore
 
         lock (conn) {
             try {
-                conn.receivePosition += conn.socket.EndReceive(ar);
+
+                int count = conn.socket.EndReceive(ar);
+                if (count <= 0) {
+                    Console.WriteLine("client close:" + conn.m_index);
+                    conn.Close();
+                    return;
+                }
+                conn.receivePosition += count;
             }
             catch (Exception e) {
                 Console.WriteLine(e.ToString());
@@ -130,9 +137,6 @@ public class NetCore
                 RpcReqHandler rpcReqHandler = NetReceiver.GetHandler(tag);
                 if (rpcReqHandler != null) {
                     SprotoTypeBase rpcRsp = rpcReqHandler(protocol.GenRequest(tag, data, offset), session);
-                    //if (pkg.HasSession) {
-                    //    connPair.conn.Send(rpcRsp, session, tag);
-                    //}
                 }
             }
             else {
@@ -149,13 +153,12 @@ public class NetCore
     private static void AcceptCb(IAsyncResult ar) {
         try {
             Socket socket = listenfd.EndAccept(ar);
-            Console.WriteLine("客户端连入!");
-
             int index = NewIndex();
 
+            Console.WriteLine("客户端连入: " + index);
+
             Conn conn = conns[index];
-            conn.Init(socket);
-            string adr = conn.GetAddress();
+            conn.Init(socket, index);
             conn.socket.BeginReceive(conn.recvStream.Buffer, conn.receivePosition,
                 conn.recvStream.Buffer.Length - conn.receivePosition,
                 SocketFlags.None, receiveCallback, conn);

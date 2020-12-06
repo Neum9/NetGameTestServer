@@ -49,10 +49,17 @@ namespace TestSp
 
             NetReceiver.AddHandler<Protocol.foobar>(
                 (SprotoTypeBase sp, long session) => {
-                    EventManager.instance.FireEvent(EVENTKEY.net_Recv, sp, session);
+                    EventManager.instance.FireEvent(EVENTKEY.net_Recv, sp, session, Protocol.foobar.Tag);
                     return null;
                 }
                 );
+
+            NetReceiver.AddHandler<Protocol.playopt>(
+                (SprotoTypeBase sp, long session) => {
+                    EventManager.instance.FireEvent(EVENTKEY.net_Recv, sp, session, Protocol.playopt.Tag);
+                    return null;
+                }
+    );
         }
     }
 }
